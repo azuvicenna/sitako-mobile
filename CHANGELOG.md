@@ -12,4 +12,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Added
 
 - Menginstall dependencies (provider, shared_preferences, http, heroicons, google_fonts)
-- Menambahakan utils, models, providers, dan services
+- Menambahakan utils, routes, theme, widgets models, providers, dan services
