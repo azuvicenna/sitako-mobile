@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_badge.dart';
 
 enum TransactionBadgeVariant {
   warning,
@@ -42,6 +43,73 @@ class TransactionUtils {
       default:
         return TransactionBadgeVariant.neutral;
     }
+  }
+
+  static AppBadgeVariant getAppBadgeVariant(String? status) {
+    switch (status) {
+      case 'Dipinjam':
+        return AppBadgeVariant.warning;
+      case 'Dikembalikan':
+        return AppBadgeVariant.success;
+      case 'Terlambat':
+      case 'Tidak Mengembalikan':
+        return AppBadgeVariant.danger;
+      case 'Menunggu Persetujuan':
+      case 'Menunggu Diambil':
+        return AppBadgeVariant.info;
+      case 'Dibatalkan':
+      default:
+        return AppBadgeVariant.neutral;
+    }
+  }
+
+  static Map<String, dynamic> getDueStatus(dynamic tglKembali) {
+    if (tglKembali == null) {
+      return {'text': null, 'isOverdue': false, 'isNear': false};
+    }
+
+    DateTime? targetDate;
+    if (tglKembali is DateTime) {
+      targetDate = tglKembali;
+    } else if (tglKembali is String) {
+      targetDate = DateTime.tryParse(tglKembali);
+    }
+
+    if (targetDate == null) {
+      return {'text': null, 'isOverdue': false, 'isNear': false};
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final diffDays = target.difference(today).inDays;
+
+    if (diffDays < 0) {
+      return {
+        'text': 'Terlambat ${diffDays.abs()} hari',
+        'isOverdue': true,
+        'isNear': false,
+      };
+    }
+    if (diffDays == 0) {
+      return {
+        'text': 'Jatuh tempo hari ini',
+        'isOverdue': true,
+        'isNear': true,
+      };
+    }
+    if (diffDays <= 2) {
+      return {
+        'text': 'Batas: $diffDays hari lagi',
+        'isOverdue': false,
+        'isNear': true,
+      };
+    }
+    return {
+      'text': 'Batas: ${target.day}/${target.month}/${target.year}',
+      'isOverdue': false,
+      'isNear': false,
+    };
   }
 
   static Color getStatusColor(String? status) {

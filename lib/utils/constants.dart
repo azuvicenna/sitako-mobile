@@ -22,4 +22,7 @@ class AppConstants {
 
   static const Duration requestTimeout = Duration(seconds: 15);
   static const int defaultPageSize = 10;
+
+  static const String appName = 'SITAKO';
+  static const String appDescription = 'Sistem Informasi Perpustakaan Sekolah';
 }

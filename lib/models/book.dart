@@ -31,6 +31,10 @@ class Book {
 
   bool get isAvailable => jumlahStok > 0;
 
+  int get stokTersedia => jumlahStok;
+
+  String? get kategori => genre.isNotEmpty ? genre.first : null;
+
   factory Book.fromJson(Map<String, dynamic> json) {
     var parsedGenre = <String>[];
     if (json['genre'] is List) {

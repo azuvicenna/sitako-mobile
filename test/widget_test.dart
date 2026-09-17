@@ -11,12 +11,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('SitakoApp builds successfully and displays initial root route',
+  testWidgets('SitakoApp builds successfully and displays login screen when unauthenticated',
       (WidgetTester tester) async {
     await tester.pumpWidget(const SitakoApp());
     await tester.pumpAndSettle();
 
     expect(find.text('SITAKO'), findsOneWidget);
+    expect(find.text('Masuk ke Akun'), findsOneWidget);
+    expect(find.text('NIS'), findsOneWidget);
 
     final authProvider =
         tester.element(find.text('SITAKO')).read<AuthProvider>();

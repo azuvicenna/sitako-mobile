@@ -28,6 +28,8 @@ class User {
 
   Color get avatarColor => ImageUtils.getAvatarColor(nama);
 
+  String get identifier => nis;
+
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id']?.toString() ?? '',

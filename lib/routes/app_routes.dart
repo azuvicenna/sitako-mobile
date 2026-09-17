@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import '../screens/auth/login_screen.dart';
+import '../screens/errors/not_found_screen.dart';
+import '../screens/member/member_borrowing_screen.dart';
+import '../screens/member/member_catalog_screen.dart';
+import '../screens/member/member_main_screen.dart';
+import '../screens/member/member_profile_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -16,16 +22,20 @@ class AppRoutes {
   static const String editProfile = '/profile/edit';
 
   static Map<String, WidgetBuilder> get routes => {
-        root: (context) => const Scaffold(body: Center(child: Text('SITAKO'))),
-        login: (context) => const Scaffold(body: Center(child: Text('Login'))),
-        main: (context) => const Scaffold(body: Center(child: Text('Main'))),
-        home: (context) => const Scaffold(body: Center(child: Text('Home'))),
-        catalog: (context) => const Scaffold(body: Center(child: Text('Catalog'))),
-        bookDetail: (context) => const Scaffold(body: Center(child: Text('Book Detail'))),
-        borrowing: (context) => const Scaffold(body: Center(child: Text('Borrowing'))),
-        bookmarks: (context) => const Scaffold(body: Center(child: Text('Bookmarks'))),
-        fines: (context) => const Scaffold(body: Center(child: Text('Fines'))),
-        profile: (context) => const Scaffold(body: Center(child: Text('Profile'))),
-        editProfile: (context) => const Scaffold(body: Center(child: Text('Edit Profile'))),
+        login: (context) => const LoginScreen(),
+        main: (context) => const MemberMainScreen(),
+        home: (context) => const MemberMainScreen(initialTabIndex: 0),
+        catalog: (context) => const MemberCatalogScreen(),
+        borrowing: (context) => const MemberBorrowingScreen(),
+        profile: (context) => const MemberProfileScreen(),
+        bookmarks: (context) => const MemberMainScreen(initialTabIndex: 1),
+        fines: (context) => const MemberMainScreen(initialTabIndex: 2),
       };
+
+  static Route<dynamic> onUnknownRoute(RouteSettings settings) {
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (_) => const NotFoundScreen(),
+    );
+  }
 }

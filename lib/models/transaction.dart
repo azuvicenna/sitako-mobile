@@ -34,6 +34,8 @@ class Transaction {
   TransactionBadgeVariant get badgeVariant =>
       TransactionUtils.getStatusBadgeVariant(status);
 
+  String get kodeTransaksi => kdTransaksi;
+
   Color get statusColor => TransactionUtils.getStatusColor(status);
 
   Color get statusBackgroundColor =>

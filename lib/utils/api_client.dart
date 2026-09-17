@@ -37,7 +37,15 @@ class ApiClient {
   })  : _client = client ?? http.Client(),
         baseUrl = baseUrl ?? AppConstants.defaultBaseUrl;
 
+  static http.Client? _mockClient;
+
+  static void setMockClient(http.Client? mockClient) {
+    _mockClient = mockClient;
+  }
+
   final http.Client _client;
+  http.Client get client => _mockClient ?? _client;
+
   String baseUrl;
   String? _authToken;
   UnauthorizedCallback? onUnauthorized;
@@ -165,7 +173,7 @@ class ApiClient {
   }) async {
     final uri = _buildUri(path, queryParams);
     try {
-      final response = await _client
+      final response = await client
           .get(uri, headers: _buildHeaders(headers))
           .timeout(timeout);
       return _handleResponse(response);
@@ -185,7 +193,7 @@ class ApiClient {
     final uri = _buildUri(path, queryParams);
     try {
       final encodedBody = body != null ? jsonEncode(body) : null;
-      final response = await _client
+      final response = await client
           .post(uri, headers: _buildHeaders(headers), body: encodedBody)
           .timeout(timeout);
       return _handleResponse(response);
@@ -205,7 +213,7 @@ class ApiClient {
     final uri = _buildUri(path, queryParams);
     try {
       final encodedBody = body != null ? jsonEncode(body) : null;
-      final response = await _client
+      final response = await client
           .put(uri, headers: _buildHeaders(headers), body: encodedBody)
           .timeout(timeout);
       return _handleResponse(response);
@@ -225,7 +233,7 @@ class ApiClient {
     final uri = _buildUri(path, queryParams);
     try {
       final encodedBody = body != null ? jsonEncode(body) : null;
-      final response = await _client
+      final response = await client
           .delete(uri, headers: _buildHeaders(headers), body: encodedBody)
           .timeout(timeout);
       return _handleResponse(response);
