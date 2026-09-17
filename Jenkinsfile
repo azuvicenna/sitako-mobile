@@ -106,7 +106,7 @@ pipeline {
                                 vmIp = bat(script: "@echo off & for /f \"tokens=2\" %%i in ('multipass info ${params.VM_NAME} ^| findstr IPv4') do echo %%i", returnStdout: true).trim()
                             }
                             if (vmIp) {
-                                targetApiUrl = "http://${vmIp}:8080/api"
+                                targetApiUrl = "http://${vmIp}/api"
                                 echo "Auto-detected Multipass VM IP: ${vmIp} -> API Base URL: ${targetApiUrl}"
                             }
                         } catch (err) {

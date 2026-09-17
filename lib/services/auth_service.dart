@@ -22,6 +22,10 @@ class AuthService {
       payload['captcha'] = captcha.trim();
     }
 
+    if (_apiClient.captchaToken != null && _apiClient.captchaToken!.isNotEmpty) {
+      payload['captcha_token'] = _apiClient.captchaToken;
+    }
+
     final response = await _apiClient.post('/auth/login', body: payload);
 
     Map<String, dynamic>? userData;
@@ -39,6 +43,8 @@ class AuthService {
         token = response['token']?.toString();
       }
     }
+
+    token ??= _apiClient.lastExtractedToken;
 
     if (userData == null) {
       throw const ApiException('Format respons server tidak sesuai');

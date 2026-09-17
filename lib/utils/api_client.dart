@@ -48,9 +48,12 @@ class ApiClient {
 
   String baseUrl;
   String? _authToken;
+  String? captchaToken;
+  String? _lastExtractedToken;
   UnauthorizedCallback? onUnauthorized;
 
   String? get authToken => _authToken;
+  String? get lastExtractedToken => _lastExtractedToken;
 
   Future<void> setAuthToken(String? token, {bool persist = true}) async {
     _authToken = token;
@@ -75,6 +78,8 @@ class ApiClient {
 
   Future<void> clearAuthToken() async {
     _authToken = null;
+    _lastExtractedToken = null;
+    captchaToken = null;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(AppConstants.keyAuthToken);
@@ -88,9 +93,20 @@ class ApiClient {
       'X-Requested-With': 'XMLHttpRequest',
     };
 
+    final cookies = <String>[];
+
     if (_authToken != null && _authToken!.isNotEmpty) {
       headers['Authorization'] = 'Bearer $_authToken';
-      headers['Cookie'] = 'token=$_authToken';
+      cookies.add('token=$_authToken');
+    }
+
+    if (captchaToken != null && captchaToken!.isNotEmpty) {
+      headers['X-Captcha-Token'] = captchaToken!;
+      cookies.add('captcha_token=$captchaToken');
+    }
+
+    if (cookies.isNotEmpty) {
+      headers['Cookie'] = cookies.join('; ');
     }
 
     if (customHeaders != null) {
@@ -114,7 +130,7 @@ class ApiClient {
     final setCookie = response.headers['set-cookie'];
     if (setCookie != null) {
       final match = RegExp(r'token=([^;]+)').firstMatch(setCookie);
-      if (match != null) {
+      if (match != null && match.group(1) != null && match.group(1) != 'deleted') {
         return match.group(1);
       }
     }
@@ -142,6 +158,26 @@ class ApiClient {
   dynamic _handleResponse(http.Response response) {
     if (response.statusCode == 401) {
       onUnauthorized?.call();
+    }
+
+    // Capture X-Captcha-Token or captcha_token cookie if present in response
+    final captchaHeader = response.headers['x-captcha-token'];
+    if (captchaHeader != null && captchaHeader.isNotEmpty) {
+      captchaToken = captchaHeader;
+    } else {
+      final setCookie = response.headers['set-cookie'];
+      if (setCookie != null) {
+        final match = RegExp(r'captcha_token=([^;]+)').firstMatch(setCookie);
+        if (match != null && match.group(1) != null && match.group(1) != 'deleted') {
+          captchaToken = match.group(1);
+        }
+      }
+    }
+
+    // Capture auth token if present in set-cookie or body
+    final extractedToken = extractTokenFromResponse(response);
+    if (extractedToken != null && extractedToken.isNotEmpty) {
+      _lastExtractedToken = extractedToken;
     }
 
     dynamic body;
