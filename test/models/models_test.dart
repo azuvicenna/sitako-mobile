@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sitako_mobile/models/book.dart';
-import 'package:sitako_mobile/models/transaction.dart';
-import 'package:sitako_mobile/models/user.dart';
+import 'package:sitako_mobile/models/index.dart';
 import 'package:sitako_mobile/utils/transaction_utils.dart';
 
 void main() {
+
   group('User Model', () {
     test('parses User from JSON correctly', () {
       final json = {
@@ -66,7 +65,25 @@ void main() {
       expect(updated.email, equals('new@example.com'));
       expect(updated.nis, equals('11111'));
     });
+
+    test('English getters return expected properties', () {
+      const user = User(
+        id: 'usr-9',
+        nama: 'English User',
+        nis: '99999',
+        email: 'eng@example.com',
+        telepon: '0812999999',
+        foto: 'https://img.example.com/avatar.png',
+        statusAktif: true,
+      );
+
+      expect(user.name, equals('English User'));
+      expect(user.phone, equals('0812999999'));
+      expect(user.photo, equals('https://img.example.com/avatar.png'));
+      expect(user.isActive, isTrue);
+    });
   });
+
 
   group('Book Model', () {
     test('parses Book from JSON correctly', () {
@@ -124,7 +141,30 @@ void main() {
       expect(json['judul'], equals('Algoritma'));
       expect(json['jumlahStok'], equals(5));
     });
+
+    test('English getters return expected properties', () {
+      const book = Book(
+        id: 'bk-4',
+        judul: 'English Title',
+        penulis: 'English Author',
+        isbn: '123-456',
+        penerbit: 'English Publisher',
+        tipeBuku: 'Digital',
+        tahunTerbit: 2024,
+        jumlahStok: 10,
+        cover: 'https://img.example.com/book.png',
+      );
+
+      expect(book.title, equals('English Title'));
+      expect(book.author, equals('English Author'));
+      expect(book.publisher, equals('English Publisher'));
+      expect(book.bookType, equals('Digital'));
+      expect(book.publishYear, equals(2024));
+      expect(book.stockCount, equals(10));
+      expect(book.coverUrl, equals('https://img.example.com/book.png'));
+    });
   });
+
 
   group('Transaction Model', () {
     test('parses Transaction from JSON and resolves status formatting', () {
@@ -167,5 +207,147 @@ void main() {
       expect(json['kdTransaksi'], equals('TRX-002'));
       expect(json['status'], equals('Dikembalikan'));
     });
+
+    test('English getters map to internal properties', () {
+      final trx = Transaction(
+        id: 'trx-3',
+        kdTransaksi: 'TRX-003',
+        status: 'Dipinjam',
+        namaAnggota: 'Budi',
+        judulBuku: 'Flutter Architecture',
+        penulisBuku: 'Dart Team',
+        tglPinjam: DateTime(2026, 9, 1),
+        tglKembali: DateTime(2026, 9, 8),
+      );
+
+      expect(trx.transactionCode, equals('TRX-003'));
+      expect(trx.bookTitle, equals('Flutter Architecture'));
+      expect(trx.bookAuthor, equals('Dart Team'));
+      expect(trx.borrowDate, equals(DateTime(2026, 9, 1)));
+      expect(trx.returnDate, equals(DateTime(2026, 9, 8)));
+    });
+
+    test('ReturnTransactionResult parses data correctly', () {
+      final res = ReturnTransactionResult.fromJson({
+        'denda': 15000,
+        'terlambatHari': 3,
+        'pesan': 'Pengembalian berhasil diproses',
+      });
+
+      expect(res.denda, equals(15000));
+      expect(res.terlambatHari, equals(3));
+      expect(res.pesan, equals('Pengembalian berhasil diproses'));
+      expect(res.fineAmount, equals(15000));
+      expect(res.daysLate, equals(3));
+      expect(res.message, equals('Pengembalian berhasil diproses'));
+    });
+  });
+
+  group('DashboardData Model', () {
+    test('parses nested dashboard payload and supports map indexing fallback', () {
+      final json = {
+        'statistik': {
+          'bukuDipinjam': 4,
+          'totalDenda': 10000,
+          'totalBookmark': 5,
+        },
+        'transaksiAktif': [
+          {
+            'id': 'trx-1',
+            'kdTransaksi': 'TRX-101',
+            'bukuId': 'bk-1',
+            'judulBuku': 'Flutter Advanced',
+            'status': 'Dipinjam',
+          },
+        ],
+        'bookmarkTerbaru': [
+          {
+            'id': 'bm-1',
+            'bukuId': 'bk-2',
+            'judulBuku': 'Clean Architecture',
+            'penulisBuku': 'Robert C. Martin',
+          },
+        ],
+        'tagihanDenda': [
+          {
+            'id': 'fn-1',
+            'nominal': 5000,
+            'status': 'Belum Lunas',
+            'deskripsi': 'Keterlambatan 5 hari',
+          },
+        ],
+      };
+
+      final data = DashboardData.fromJson(json);
+
+      expect(data.statistics.borrowedBooksCount, equals(4));
+      expect(data.statistics.totalFines, equals(10000));
+      expect(data.statistics.totalBookmarks, equals(5));
+      expect(data.activeLoans.length, equals(1));
+      expect(data.activeLoans.first.title, equals('Flutter Advanced'));
+      expect(data.recentBookmarks.length, equals(1));
+      expect(data.recentBookmarks.first.title, equals('Clean Architecture'));
+      expect(data.fineBills.length, equals(1));
+      expect(data.fineBills.first.amount, equals(5000));
+
+      // Backward compatibility map operator
+      expect(data['statistik']['bukuDipinjam'], equals(4));
+      expect(data['transaksiAktif'].length, equals(1));
+    });
+  });
+
+  group('BookmarkItem Model', () {
+    test('parses from JSON correctly with fallback fields', () {
+      final json = {
+        'id': 'bm-10',
+        'bukuId': 'bk-10',
+        'createdAt': '2026-09-17T12:00:00.000Z',
+        'buku': {
+          'id': 'bk-10',
+          'judul': 'Algoritma & Struktur Data',
+          'penulis': 'Rinaldi Munir',
+          'penerbit': 'Informatika',
+          'tipeBuku': 'Fisik',
+          'jumlahStok': 3,
+        },
+      };
+
+      final item = BookmarkItem.fromJson(json);
+
+      expect(item.id, equals('bm-10'));
+      expect(item.bukuId, equals('bk-10'));
+      expect(item.bookId, equals('bk-10'));
+      expect(item.title, equals('Algoritma & Struktur Data'));
+      expect(item.author, equals('Rinaldi Munir'));
+      expect(item.publisher, equals('Informatika'));
+      expect(item.bookType, equals('Fisik'));
+    });
+  });
+
+  group('FinePaymentItem Model', () {
+    test('parses from JSON correctly', () {
+      final json = {
+        'id': 'fine-1',
+        'kdTransaksi': 'TRX-FINE-001',
+        'judulBuku': 'Clean Code',
+        'nominal': 20000,
+        'status': 'Lunas',
+        'tglBayar': '2026-09-15T09:00:00.000Z',
+        'metodeBayar': 'Tunai',
+        'keterangan': 'Denda keterlambatan 4 hari',
+      };
+
+      final item = FinePaymentItem.fromJson(json);
+
+      expect(item.id, equals('fine-1'));
+      expect(item.transactionCode, equals('TRX-FINE-001'));
+      expect(item.bookTitle, equals('Clean Code'));
+      expect(item.amount, equals(20000));
+      expect(item.isPaid, isTrue);
+      expect(item.paymentMethod, equals('Tunai'));
+      expect(item.formattedAmount, equals('Rp 20.000'));
+    });
   });
 }
+
+

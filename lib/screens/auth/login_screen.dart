@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/constants.dart';
+import '../../validations/auth_validators.dart';
 import '../../widgets/app_alert.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_card.dart';
@@ -45,8 +46,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _checkAuthAndLoadCaptcha() async {
+    if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
     if (authProvider.isAuthenticated) {
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.main);
       return;
     }
@@ -160,12 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             keyboardType: TextInputType.number,
                             textInputAction: TextInputAction.next,
                             prefixIcon: const Icon(Icons.badge_outlined, size: 20),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'NIS wajib diisi';
-                              }
-                              return null;
-                            },
+                            validator: AuthValidators.validateNis,
                           ),
                           const SizedBox(height: 16),
                           AppTextField(
@@ -189,12 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 });
                               },
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Kata sandi wajib diisi';
-                              }
-                              return null;
-                            },
+                            validator: AuthValidators.validatePassword,
                           ),
                           const SizedBox(height: 16),
                           _buildCaptchaSection(),
@@ -362,12 +355,7 @@ class _LoginScreenState extends State<LoginScreen> {
           hintText: 'Ketik kode CAPTCHA di atas',
           textInputAction: TextInputAction.done,
           prefixIcon: const Icon(Icons.security, size: 20),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Kode CAPTCHA wajib diisi';
-            }
-            return null;
-          },
+          validator: AuthValidators.validateCaptcha,
           onSubmitted: (_) => _handleLogin(),
         ),
       ],

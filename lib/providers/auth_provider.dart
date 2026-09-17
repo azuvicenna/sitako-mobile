@@ -2,20 +2,24 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
+import '../services/auth_service.dart';
 import '../utils/api_client.dart';
 import '../utils/constants.dart';
 import '../utils/error_utils.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiClient _apiClient;
+  final AuthService _authService;
 
   User? _user;
   bool _isInitialized = false;
   bool _isLoading = false;
   String? _errorMessage;
 
-  AuthProvider({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient.instance {
+  AuthProvider({ApiClient? apiClient, AuthService? authService})
+      : _apiClient = apiClient ?? ApiClient.instance,
+        _authService = authService ??
+            AuthService(apiClient: apiClient ?? ApiClient.instance) {
     _apiClient.onUnauthorized = _handleUnauthorized;
   }
 
@@ -65,38 +69,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final payload = <String, dynamic>{
-        'identifier': identifier.trim(),
-        'password': password,
-      };
+      final result = await _authService.login(
+        identifier: identifier,
+        password: password,
+        captcha: captcha,
+      );
 
-      if (captcha != null && captcha.trim().isNotEmpty) {
-        payload['captcha'] = captcha.trim();
-      }
-
-      final response = await _apiClient.post('/auth/login', body: payload);
-
-      Map<String, dynamic>? userData;
-      String? token;
-
-      if (response is Map<String, dynamic>) {
-        if (response['data'] is Map<String, dynamic>) {
-          final data = response['data'] as Map<String, dynamic>;
-          userData = (data['user'] is Map<String, dynamic>)
-              ? data['user'] as Map<String, dynamic>
-              : data;
-          token = data['token']?.toString();
-        } else if (response['user'] is Map<String, dynamic>) {
-          userData = response['user'] as Map<String, dynamic>;
-          token = response['token']?.toString();
-        }
-      }
-
-      if (userData == null) {
-        throw const ApiException('Format respons server tidak sesuai');
-      }
-
-      final loggedInUser = User.fromJson(userData);
+      final loggedInUser = result['user'] as User;
+      final token = result['token']?.toString();
 
       if (token != null && token.isNotEmpty) {
         await _apiClient.setAuthToken(token);
@@ -122,23 +102,16 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> refreshProfile() async {
     try {
-      final response = await _apiClient.get('/profile/me');
-      if (response is Map<String, dynamic>) {
-        final userData = (response['data'] is Map<String, dynamic>)
-            ? response['data'] as Map<String, dynamic>
-            : response;
+      final updatedUser = await _authService.getProfile();
+      _user = updatedUser;
 
-        final updatedUser = User.fromJson(userData);
-        _user = updatedUser;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        AppConstants.keyUserData,
+        jsonEncode(updatedUser.toJson()),
+      );
 
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-          AppConstants.keyUserData,
-          jsonEncode(updatedUser.toJson()),
-        );
-
-        notifyListeners();
-      }
+      notifyListeners();
     } catch (_) {}
   }
 
@@ -153,31 +126,20 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final payload = <String, dynamic>{};
-      if (nama != null) payload['nama'] = nama;
-      if (email != null) payload['email'] = email;
-      if (telepon != null) payload['telepon'] = telepon;
-      if (password != null && password.isNotEmpty) payload['password'] = password;
+      final updatedUser = await _authService.updateProfile(
+        nama: nama,
+        email: email,
+        telepon: telepon,
+        password: password,
+      );
 
-      final response = await _apiClient.put('/profile/me', body: payload);
+      _user = updatedUser;
 
-      Map<String, dynamic>? userData;
-      if (response is Map<String, dynamic>) {
-        userData = (response['data'] is Map<String, dynamic>)
-            ? response['data'] as Map<String, dynamic>
-            : response;
-      }
-
-      if (userData != null) {
-        final updatedUser = User.fromJson(userData);
-        _user = updatedUser;
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-          AppConstants.keyUserData,
-          jsonEncode(updatedUser.toJson()),
-        );
-      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        AppConstants.keyUserData,
+        jsonEncode(updatedUser.toJson()),
+      );
 
       _isLoading = false;
       notifyListeners();
@@ -191,9 +153,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    try {
-      await _apiClient.post('/auth/logout');
-    } catch (_) {}
+    await _authService.logout();
     await clearUserSession();
   }
 
@@ -211,12 +171,20 @@ class AuthProvider extends ChangeNotifier {
 
   Future<String?> fetchCaptcha() async {
     try {
-      final response = await _apiClient.get('/auth/captcha');
-      return response?.toString();
+      final captcha = await _authService.fetchCaptcha();
+      return captcha;
     } catch (e) {
       _errorMessage = ErrorUtils.getErrorMessage(e);
       notifyListeners();
       return null;
     }
+  }
+
+  @override
+  void dispose() {
+    if (_apiClient.onUnauthorized == _handleUnauthorized) {
+      _apiClient.onUnauthorized = null;
+    }
+    super.dispose();
   }
 }

@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 
-- Menginstall dependencies (provider, shared_preferences, http, heroicons, google_fonts)
-- Menambahakan utils, routes, theme, widgets models, providers, screens, dan services
-- Menambahkan unit dan integration testing
+- Menginstall dependencies (provider, shared_preferences, http, heroicons, google_fonts, url_launcher)
+- Menambahkan utils, routes, theme, widgets models, providers, services, validations, dan screens
+- Menambahkan unit, widget, service, validation, dan integration testing
+- Menyiapkan kesiapan rilis mandiri APK & integrasi VM Multipass (permissions, cleartext HTTP, dynamic API URL, error handling)
+- Memperbarui dokumentasi README.md komprehensif selaras dengan standar SITAKO Backend dan SITAKO Web

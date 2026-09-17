@@ -8,6 +8,7 @@ import '../../widgets/app_badge.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_modal.dart';
+import 'components/edit_profile_sheet.dart';
 
 class MemberProfileScreen extends StatelessWidget {
   const MemberProfileScreen({super.key});
@@ -142,7 +143,19 @@ class MemberProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              AppButton(
+                text: 'Edit Informasi Profil',
+                variant: AppButtonVariant.secondary,
+                isFullWidth: true,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                onPressed: () {
+                  if (user != null) {
+                    EditProfileSheet.show(context, user: user);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
               AppButton(
                 text: 'Keluar dari Akun',
                 variant: AppButtonVariant.danger,

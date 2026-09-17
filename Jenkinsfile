@@ -22,6 +22,21 @@ pipeline {
             defaultValue: true,
             description: 'Run automated unit and widget tests before building'
         )
+        string(
+            name: 'API_BASE_URL',
+            defaultValue: '',
+            description: 'URL API Backend SITAKO kustom (misal http://192.168.1.100:8080/api). Kosongkan jika ingin auto-detect dari VM Multipass.'
+        )
+        booleanParam(
+            name: 'USE_MULTIPASS_IP',
+            defaultValue: true,
+            description: 'Deteksi otomatis IP dari VM Multipass jika API_BASE_URL kosong'
+        )
+        string(
+            name: 'VM_NAME',
+            defaultValue: 'sitako-vm',
+            description: 'Nama VM Multipass tujuan backend SITAKO'
+        )
     }
 
     environment {
@@ -78,6 +93,38 @@ pipeline {
             }
         }
 
+        stage('Resolve API Base URL') {
+            steps {
+                script {
+                    def targetApiUrl = (params.API_BASE_URL ?: '').trim()
+                    if (!targetApiUrl && params.USE_MULTIPASS_IP) {
+                        try {
+                            def vmIp = ""
+                            if (isUnix()) {
+                                vmIp = sh(script: "multipass info ${params.VM_NAME} | grep IPv4 | awk '{print \$2}'", returnStdout: true).trim()
+                            } else {
+                                vmIp = bat(script: "@echo off & for /f \"tokens=2\" %%i in ('multipass info ${params.VM_NAME} ^| findstr IPv4') do echo %%i", returnStdout: true).trim()
+                            }
+                            if (vmIp) {
+                                targetApiUrl = "http://${vmIp}:8080/api"
+                                echo "Auto-detected Multipass VM IP: ${vmIp} -> API Base URL: ${targetApiUrl}"
+                            }
+                        } catch (err) {
+                            echo "Warning: Gagal mendeteksi IP Multipass: ${err.message}. Menggunakan default fallback."
+                        }
+                    }
+
+                    if (targetApiUrl) {
+                        env.DART_DEFINE_API = "--dart-define=API_BASE_URL=${targetApiUrl}"
+                        echo "Build akan menggunakan: ${env.DART_DEFINE_API}"
+                    } else {
+                        env.DART_DEFINE_API = ""
+                        echo "Build menggunakan default internal URL"
+                    }
+                }
+            }
+        }
+
         stage('Build APK') {
             when {
                 expression {
@@ -87,7 +134,8 @@ pipeline {
             steps {
                 script {
                     def splitFlag = params.SPLIT_PER_ABI ? '--split-per-abi' : ''
-                    executeCmd("flutter build apk --${params.BUILD_MODE} ${splitFlag}")
+                    def dartDefine = env.DART_DEFINE_API ?: ''
+                    executeCmd("flutter build apk --${params.BUILD_MODE} ${splitFlag} ${dartDefine}".trim())
                 }
             }
         }
@@ -100,7 +148,8 @@ pipeline {
             }
             steps {
                 script {
-                    executeCmd("flutter build appbundle --${params.BUILD_MODE}")
+                    def dartDefine = env.DART_DEFINE_API ?: ''
+                    executeCmd("flutter build appbundle --${params.BUILD_MODE} ${dartDefine}".trim())
                 }
             }
         }

@@ -24,21 +24,32 @@ class User {
     this.createdAt,
   });
 
-  String get initials => ImageUtils.getInitials(nama);
+  // --- English Naming Convention Getters ---
+  String get name => nama;
+  String get phone => telepon;
+  String? get photo => foto;
+  bool get isActive => statusAktif;
 
-  Color get avatarColor => ImageUtils.getAvatarColor(nama);
-
+  String get initials => ImageUtils.getInitials(name);
+  Color get avatarColor => ImageUtils.getAvatarColor(name);
   String get identifier => nis;
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id']?.toString() ?? '',
-      nama: json['nama']?.toString() ?? '',
+      nama: json['name']?.toString() ??
+          json['nama']?.toString() ??
+          '',
       nis: json['nis']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
-      telepon: json['telepon']?.toString() ?? '',
-      foto: json['foto']?.toString(),
-      statusAktif: json['status_aktif'] == true || json['statusAktif'] == true,
+      telepon: json['phone']?.toString() ??
+          json['telepon']?.toString() ??
+          '',
+      foto: json['photo']?.toString() ?? json['foto']?.toString(),
+      statusAktif: json['isActive'] == true ||
+          json['is_active'] == true ||
+          json['status_aktif'] == true ||
+          json['statusAktif'] == true,
       role: json['role']?.toString() ?? 'Anggota',
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
@@ -51,36 +62,46 @@ class User {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'nama': nama,
+      'name': name,
       'nis': nis,
       'email': email,
+      'phone': phone,
+      'photo': photo,
+      'isActive': isActive,
+      'role': role,
+      'createdAt': createdAt?.toIso8601String(),
+      // Backward-compatible keys
+      'nama': nama,
       'telepon': telepon,
       'foto': foto,
       'status_aktif': statusAktif,
-      'role': role,
-      'createdAt': createdAt?.toIso8601String(),
     };
   }
 
   User copyWith({
     String? id,
-    String? nama,
+    String? name,
     String? nis,
     String? email,
+    String? phone,
+    String? photo,
+    bool? isActive,
+    String? role,
+    DateTime? createdAt,
+    // Indonesian parameter aliases
+    String? nama,
     String? telepon,
     String? foto,
     bool? statusAktif,
-    String? role,
-    DateTime? createdAt,
   }) {
     return User(
       id: id ?? this.id,
-      nama: nama ?? this.nama,
+      nama: name ?? nama ?? this.nama,
       nis: nis ?? this.nis,
       email: email ?? this.email,
-      telepon: telepon ?? this.telepon,
-      foto: foto ?? this.foto,
-      statusAktif: statusAktif ?? this.statusAktif,
+      telepon: phone ?? telepon ?? this.telepon,
+      foto: photo ?? foto ?? this.foto,
+      statusAktif: isActive ?? statusAktif ?? this.statusAktif,
       role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
     );

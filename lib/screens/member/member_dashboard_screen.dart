@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/dashboard_data.dart';
 import '../../providers/auth_provider.dart';
+import '../../routes/app_routes.dart';
+import '../../services/dashboard_service.dart';
 import '../../theme/app_colors.dart';
-import '../../utils/api_client.dart';
 import '../../utils/currency_utils.dart';
-import '../../utils/date_utils.dart';
 import '../../utils/error_utils.dart';
 import '../../utils/image_utils.dart';
 import '../../utils/transaction_utils.dart';
@@ -15,14 +16,20 @@ import '../../widgets/app_card.dart';
 
 class MemberDashboardScreen extends StatefulWidget {
   final Function(int)? onNavigateTab;
+  final DashboardService? dashboardService;
 
-  const MemberDashboardScreen({super.key, this.onNavigateTab});
+  const MemberDashboardScreen({
+    super.key,
+    this.onNavigateTab,
+    this.dashboardService,
+  });
 
   @override
   State<MemberDashboardScreen> createState() => _MemberDashboardScreenState();
 }
 
 class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
+  late final DashboardService _dashboardService;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -30,12 +37,13 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   int _totalDenda = 0;
   int _totalBookmark = 0;
 
-  List<Map<String, dynamic>> _activeLoans = [];
-  List<Map<String, dynamic>> _recentBookmarks = [];
+  List<ActiveLoanItem> _activeLoans = [];
+  List<RecentBookmarkItem> _recentBookmarks = [];
 
   @override
   void initState() {
     super.initState();
+    _dashboardService = widget.dashboardService ?? DashboardService();
     _loadDashboardData();
   }
 
@@ -46,39 +54,17 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     });
 
     try {
-      final response = await ApiClient.instance.get('/member/dashboard');
-      if (response is Map<String, dynamic>) {
-        final data = (response['data'] is Map<String, dynamic>)
-            ? response['data'] as Map<String, dynamic>
-            : response;
+      final data = await _dashboardService.getDashboardData();
 
-        final stats = data['statistik'] as Map<String, dynamic>? ?? {};
-        final activeList = data['transaksiAktif'] as List<dynamic>? ?? [];
-        final bookmarkList = data['bookmarkTerbaru'] as List<dynamic>? ?? [];
-
-        if (mounted) {
-          setState(() {
-            _bukuDipinjam = int.tryParse(stats['bukuDipinjam']?.toString() ?? '0') ?? 0;
-            _totalDenda = int.tryParse(stats['totalDenda']?.toString() ?? '0') ?? 0;
-            _totalBookmark = int.tryParse(stats['totalBookmark']?.toString() ?? '0') ?? 0;
-
-            _activeLoans = activeList
-                .whereType<Map<String, dynamic>>()
-                .toList();
-
-            _recentBookmarks = bookmarkList
-                .whereType<Map<String, dynamic>>()
-                .toList();
-
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _bukuDipinjam = data.statistics.borrowedBooksCount;
+          _totalDenda = data.statistics.totalFines;
+          _totalBookmark = data.statistics.totalBookmarks;
+          _activeLoans = data.activeLoans;
+          _recentBookmarks = data.recentBookmarks;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -230,7 +216,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
             Expanded(
               child: AppAccentCard(
                 accentColor: AppColors.info,
-                onTap: () => widget.onNavigateTab?.call(1),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.bookmarks),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -272,6 +258,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
         const SizedBox(height: 12),
         AppAccentCard(
           accentColor: _totalDenda > 0 ? AppColors.danger : AppColors.success,
+          onTap: () => Navigator.of(context).pushNamed(AppRoutes.fines),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -455,10 +442,9 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final item = _activeLoans[index];
-                final buku = item['buku'] as Map<String, dynamic>? ?? {};
-                final judul = buku['judul']?.toString() ?? item['judulBuku']?.toString() ?? 'Judul Buku';
-                final status = item['status']?.toString() ?? 'Dipinjam';
-                final tglKembali = item['tglKembali']?.toString();
+                final judul = item.bookTitle.isNotEmpty ? item.bookTitle : 'Judul Buku';
+                final status = item.status;
+                final tglKembali = item.returnDate != null ? item.formattedReturnDate : null;
 
                 return Container(
                   padding: const EdgeInsets.all(10),
@@ -503,7 +489,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                             if (tglKembali != null) ...[
                               const SizedBox(height: 2),
                               Text(
-                                'Batas: ${AppDateUtils.formatDate(tglKembali)}',
+                                'Batas: $tglKembali',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.charcoalMuted,
@@ -541,14 +527,14 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => widget.onNavigateTab?.call(1),
+                onPressed: () => Navigator.of(context).pushNamed(AppRoutes.bookmarks),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: const Text(
-                  'Katalog',
+                  'Lihat Semua',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -596,13 +582,8 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final item = _recentBookmarks[index];
-                final buku = item['buku'] as Map<String, dynamic>? ?? item;
-                final judul = buku['judul']?.toString() ??
-                    buku['judulBuku']?.toString() ??
-                    item['judulBuku']?.toString() ??
-                    item['judul']?.toString() ??
-                    'Judul Buku';
-                final penulis = buku['penulis']?.toString() ?? item['penulis']?.toString() ?? '-';
+                final judul = item.bookTitle.isNotEmpty ? item.bookTitle : 'Judul Buku';
+                final penulis = item.bookAuthor.isNotEmpty ? item.bookAuthor : '-';
 
                 return Container(
                   padding: const EdgeInsets.all(10),

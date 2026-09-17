@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../models/transaction.dart';
+import '../../services/transaction_service.dart';
 import '../../theme/app_colors.dart';
-import '../../utils/api_client.dart';
 import '../../utils/date_utils.dart';
 import '../../utils/error_utils.dart';
 import '../../utils/transaction_utils.dart';
 import '../../widgets/app_badge.dart';
 import '../../widgets/app_card.dart';
+import 'components/borrowing_return_sheet.dart';
 
 class MemberBorrowingScreen extends StatefulWidget {
-  const MemberBorrowingScreen({super.key});
+  final TransactionService? transactionService;
+
+  const MemberBorrowingScreen({super.key, this.transactionService});
 
   @override
   State<MemberBorrowingScreen> createState() => _MemberBorrowingScreenState();
 }
 
 class _MemberBorrowingScreenState extends State<MemberBorrowingScreen> {
+  late final TransactionService _transactionService;
   bool _isLoading = false;
   String? _errorMessage;
   List<Transaction> _transactions = [];
@@ -32,6 +36,7 @@ class _MemberBorrowingScreenState extends State<MemberBorrowingScreen> {
   @override
   void initState() {
     super.initState();
+    _transactionService = widget.transactionService ?? TransactionService();
     _fetchTransactions();
   }
 
@@ -42,44 +47,15 @@ class _MemberBorrowingScreenState extends State<MemberBorrowingScreen> {
     });
 
     try {
-      final queryParams = <String, String>{
-        'page': '1',
-        'limit': '30',
-      };
+      final transactions = await _transactionService.getMemberTransactions(
+        status: _selectedStatus,
+      );
 
-      if (_selectedStatus != 'Semua') {
-        if (_selectedStatus == 'Menunggu') {
-          queryParams['status'] = 'Menunggu Persetujuan';
-        } else {
-          queryParams['status'] = _selectedStatus;
-        }
-      }
-
-      final queryString = Uri(queryParameters: queryParams).query;
-      final response = await ApiClient.instance.get('/member/transactions/?$queryString');
-
-      if (response is Map<String, dynamic>) {
-        final list = (response['data'] is List)
-            ? response['data'] as List<dynamic>
-            : [];
-
-        final parsed = list
-            .whereType<Map<String, dynamic>>()
-            .map((e) => Transaction.fromJson(e))
-            .toList();
-
-        if (mounted) {
-          setState(() {
-            _transactions = parsed;
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _transactions = transactions;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -170,9 +146,18 @@ class _MemberBorrowingScreenState extends State<MemberBorrowingScreen> {
           final bookTitle = tx.judulBuku.isNotEmpty ? tx.judulBuku : 'Buku Perpustakaan';
           final badgeVariant = TransactionUtils.getAppBadgeVariant(tx.status);
           final dueInfo = TransactionUtils.getDueStatus(tx.tglKembali);
+          final canReturn = tx.status == 'Dipinjam' || tx.status == 'Terlambat';
 
           return AppCard(
             padding: const EdgeInsets.all(14),
+            onTap: canReturn
+                ? () => BorrowingReturnSheet.show(
+                      context,
+                      transaction: tx,
+                      transactionService: _transactionService,
+                      onSuccess: _fetchTransactions,
+                    )
+                : null,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -268,6 +253,33 @@ class _MemberBorrowingScreenState extends State<MemberBorrowingScreen> {
                         color: dueInfo['isOverdue'] == true
                             ? AppColors.dangerText
                             : AppColors.warningText,
+                      ),
+                    ),
+                  ),
+                ],
+                if (canReturn) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.charcoalDark,
+                        side: const BorderSide(color: AppColors.mustard),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      icon: const Icon(Icons.assignment_return_outlined, size: 16),
+                      label: const Text(
+                        'Ajukan Pengembalian',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () => BorrowingReturnSheet.show(
+                        context,
+                        transaction: tx,
+                        transactionService: _transactionService,
+                        onSuccess: _fetchTransactions,
                       ),
                     ),
                   ),

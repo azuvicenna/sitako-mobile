@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../models/book.dart';
+import '../../services/book_service.dart';
 import '../../theme/app_colors.dart';
-import '../../utils/api_client.dart';
 import '../../utils/error_utils.dart';
 import '../../utils/image_utils.dart';
 import '../../widgets/app_badge.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_text_field.dart';
+import 'components/book_detail_sheet.dart';
 
 class MemberCatalogScreen extends StatefulWidget {
-  const MemberCatalogScreen({super.key});
+  final BookService? bookService;
+
+  const MemberCatalogScreen({super.key, this.bookService});
 
   @override
   State<MemberCatalogScreen> createState() => _MemberCatalogScreenState();
 }
 
 class _MemberCatalogScreenState extends State<MemberCatalogScreen> {
+  late final BookService _bookService;
   final _searchController = TextEditingController();
 
   bool _isLoading = false;
@@ -26,6 +30,7 @@ class _MemberCatalogScreenState extends State<MemberCatalogScreen> {
   @override
   void initState() {
     super.initState();
+    _bookService = widget.bookService ?? BookService();
     _fetchBooks();
   }
 
@@ -42,44 +47,16 @@ class _MemberCatalogScreenState extends State<MemberCatalogScreen> {
     });
 
     try {
-      final queryParams = <String, String>{
-        'page': '1',
-        'limit': '30',
-      };
+      final books = await _bookService.getBooks(
+        search: _searchController.text.trim(),
+        bookType: _selectedType,
+      );
 
-      final query = _searchController.text.trim();
-      if (query.isNotEmpty) {
-        queryParams['search'] = query;
-      }
-      if (_selectedType != 'Semua') {
-        queryParams['bookType'] = _selectedType;
-      }
-
-      final queryString = Uri(queryParameters: queryParams).query;
-      final response = await ApiClient.instance.get('/book?$queryString');
-
-      if (response is Map<String, dynamic>) {
-        final list = (response['data'] is List)
-            ? response['data'] as List<dynamic>
-            : [];
-
-        final parsed = list
-            .whereType<Map<String, dynamic>>()
-            .map((e) => Book.fromJson(e))
-            .toList();
-
-        if (mounted) {
-          setState(() {
-            _books = parsed;
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _books = books;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -196,6 +173,11 @@ class _MemberCatalogScreenState extends State<MemberCatalogScreen> {
 
           return AppCard(
             padding: const EdgeInsets.all(10),
+            onTap: () => BookDetailSheet.show(
+              context,
+              book: book,
+              bookService: _bookService,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
