@@ -6,7 +6,7 @@ SITAKO (Sistem Informasi Perpustakaan Sekolah) Mobile adalah aplikasi klien mobi
 
 Aplikasi ini mengadaptasi sistem desain antarmuka dari [SITAKO Web](https://github.com/azuvicenna/sitako-web) dengan palet warna terpadu: aksen utama **Mustard Gold (`#D97706`)**, **Charcoal**, pedoman desain Material 3, tipografi modern Google Fonts (**Plus Jakarta Sans**), serta komponen UI kustom yang responsif.
 
-SITAKO Mobile terhubung langsung dengan [SITAKO Backend](https://github.com/azuvicenna/sitako-backend) melalui RESTful API terstandarisasi berbasis JSON Web Token (JWT) dengan penanganan sesi lokal persisten.
+SITAKO Mobile terhubung langsung dengan [SITAKO Server](https://github.com/azuvicenna/sitako-server) melalui RESTful API terstandarisasi berbasis JSON Web Token (JWT) dengan penanganan sesi lokal persisten.
 
 ---
 
